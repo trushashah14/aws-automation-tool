@@ -1,0 +1,12 @@
+aws:
+  region_name: us-east-2
+  instance_type: t2.micro
+  ami_id: ami-xxx  
+  key_name: my-key-pair_name            # You can create this key pair later if needed
+  security_group_name: my-security-group_name
+  security_group_description: Security group for EC2 automation
+  instance_name: my-ec2-instance
+
+s3:
+  bucket_name: ts-automation-bucket
+  region_name: us-east-2
