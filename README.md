@@ -103,7 +103,7 @@ python main.py s3-file-upload --file-path README.md
 ### Option 2: Use Makefile Commands Directly
 
 ```bash
-make create                    # 🚀 Launch a new EC2 instance
+make create-instances    # 🚀 Launch a new EC2 instance
 make list-instances            # 📄 List all running EC2 instances
 make stop-instance id=...      # ⏹️ Stop an EC2 instance
 make start-instance id=...     # ▶️ Start a stopped EC2 instance
@@ -122,11 +122,12 @@ make clean                     # 🧹 Stop and remove all containers/images
 💡 Replace `...` with actual values (e.g., instance ID, file name).
 
 ### 🔁 Multi-File Support
-You can download or delete multiple files at once by wrapping them in quotes:
+You can update,  download or delete multiple files at once by wrapping them in quotes:
 
 ```bash
-make delete-object key="file1.txt file2.txt"
-make download-object key="file1.txt file2.txt"
+make delete-object obj="obj1 obj2"
+make download-object obj="obj1 obj2"
+make upload-object obj="obj1 obj2"
 ```
 Same applies to python main.py commands inside the container.
 

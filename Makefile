@@ -9,6 +9,11 @@ build:
 run:
 	docker run --rm -it -v ${PWD}/config.yaml:/app/config.yaml -v C:/Users/behip/.aws/credentials:/root/.aws/credentials $(IMAGE_NAME)
 
+lint:
+	docker run --rm $(IMAGE_NAME) sh -c "ruff aws_automation tests && black --check aws_automation tests"
+
+test:
+	docker run --rm $(IMAGE_NAME) sh -c "pytest tests"
 
 # Run an actual command, e.g. list EC2
 create-instances:
@@ -30,22 +35,22 @@ list-buckets:
 	docker run --rm -it -v ${PWD}/config.yaml:/app/config.yaml -v C:/Users/behip/.aws/credentials:/root/.aws/credentials  $(IMAGE_NAME) s3-bucket-list
 
 list-objects:
-	docker run --rm -it -v ${PWD}/config.yaml:/app/config.yaml -v C:/Users/behip/.aws/credentials:/root/.aws/credentials $(IMAGE_NAME) s3-file-list
+	docker run --rm -it -v ${PWD}/config.yaml:/app/config.yaml -v C:/Users/behip/.aws/credentials:/root/.aws/credentials $(IMAGE_NAME) s3-obj-list
 
 create-bucket:
 	docker run --rm -it -v ${PWD}/config.yaml:/app/config.yaml -v C:/Users/behip/.aws/credentials:/root/.aws/credentials $(IMAGE_NAME) s3-create
 
-upload-object:
-	docker run --rm -it -v ${PWD}:/app -v ${PWD}/config.yaml:/app/config.yaml -v C:/Users/behip/.aws/credentials:/root/.aws/credentials $(IMAGE_NAME) s3-file-upload --file-path $(file)
+upload-objects:
+	docker run --rm -it -v ${PWD}:/app -v ${PWD}/config.yaml:/app/config.yaml -v C:/Users/behip/.aws/credentials:/root/.aws/credentials $(IMAGE_NAME) s3-obj-upload --obj-paths $(obj)
 
-delete-object:
-	docker run --rm -it -v ${PWD}/config.yaml:/app/config.yaml -v C:/Users/behip/.aws/credentials:/root/.aws/credentials $(IMAGE_NAME) s3-file-delete --file-names $(key)
+delete-objects:
+	docker run --rm -it -v ${PWD}/config.yaml:/app/config.yaml -v C:/Users/behip/.aws/credentials:/root/.aws/credentials $(IMAGE_NAME) s3-obj-delete --obj-names $(obj)
 
 delete-bucket:
 	docker run --rm -it -v ${PWD}/config.yaml:/app/config.yaml -v C:/Users/behip/.aws/credentials:/root/.aws/credentials $(IMAGE_NAME) s3-delete
 
-download-object:
-	docker run --rm -it -v ${PWD}:/app -v ${PWD}/config.yaml:/app/config.yaml -v C:/Users/behip/.aws/credentials:/root/.aws/credentials $(IMAGE_NAME) s3-file-download --file-names $(file)
+download-objects:
+	docker run --rm -it -v ${PWD}:/app -v ${PWD}/config.yaml:/app/config.yaml -v C:/Users/behip/.aws/credentials:/root/.aws/credentials $(IMAGE_NAME) s3-obj-download --obj-names $(obj)
 
 # Clean up Docker image
 clean:
@@ -64,8 +69,8 @@ help:
 	@echo "  make create-bucket          create S3 buckets"
 	@echo "  make list-buckets          List S3 buckets"
 	@echo "  make list-objects          Lists objects in S3 bucket configured in config.yaml"
-	@echo "  make upload-object  file=path     Upload files to S3 buckets"
-	@echo "  make delete-object  key=\"key1 key2\"    Delete sepcified objects from s3 bucket"
-	@echo "  make download-object key=\"key1 key2\"    Download specified objects from s3 bucket"
+	@echo "  make upload-objects  obj=path     Upload objs to S3 buckets"
+	@echo "  make delete-objects  obj=\"obj1 obj2\"    Delete sepcified objects from s3 bucket"
+	@echo "  make download-objects obj=\"obj1 obj2\"    Download specified objects from s3 bucket"
 	@echo "  make delete-bucket    Deletes the bucket configured in config.yaml"
 	@echo "  make clean                 Remove Docker image"

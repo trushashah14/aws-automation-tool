@@ -1,21 +1,14 @@
-import boto3  # Official AWS SDK for Python
+
 from tabulate import tabulate
 from botocore.exceptions import ClientError, BotoCoreError  # Handle AWS/boto3 errors
-from aws_automation.utils import load_config, logger
+from aws_automation.utils import logger
 
 log = logger()
 
-# Create EC2 client using region from config
-def get_ec2_client():
-    #Create and return a boto3 EC2 client based on config.
-    config = load_config()
-    return boto3.client('ec2', region_name=config['aws']['region_name'])
-
 
 # Start an EC2 instance
-def start_instance(instance_id):
+def start_instance(ec2_client,instance_id):
     #Start a stopped EC2 instance.
-    ec2_client = get_ec2_client()
     try:
         log.info(f"Starting instance {instance_id}...")
         response = ec2_client.start_instances(InstanceIds=[instance_id])
@@ -30,9 +23,8 @@ def start_instance(instance_id):
         log.error(f"BotoCoreError while starting instance: {str(e)}")
 
 # Stop an EC2 instance
-def stop_instance(instance_id):
+def stop_instance(ec2_client,instance_id):
 
-    ec2_client= get_ec2_client()
     try:
         log.info(f"Stopping instance {instance_id}...")
         response = ec2_client.stop_instances(InstanceIds=[instance_id])
@@ -47,9 +39,9 @@ def stop_instance(instance_id):
         log.error(f"BotoCoreError while stopping instance: {str(e)}")
 
 # Terminate an EC2 instance
-def terminate_instance(instance_id):
+def terminate_instance(ec2_client,instance_id):
     #Terminate an EC2 instance permanently.
-    ec2_client = get_ec2_client()
+    
     try:
         confirm = input(f"⚠️ Are you sure you want to permanently TERMINATE instance '{instance_id}'? (yes/no): ")
         if confirm.lower() != 'yes':
@@ -69,8 +61,8 @@ def terminate_instance(instance_id):
         log.error(f"BotoCoreError while terminating instance: {str(e)}")
 
 # List all running EC2 instances
-def list_running_instances():
-    ec2_client = get_ec2_client()
+def list_running_instances(ec2_client):
+   
     try:
         instances = []  # List to store instance info
         response = ec2_client.describe_instances(

@@ -1,138 +1,110 @@
-import boto3
-import yaml
 import os
 from botocore.exceptions import ClientError, BotoCoreError
-from aws_automation.utils import load_config, logger
 from tabulate import tabulate
+from aws_automation.utils import logger
 
-log= logger()
+log = logger()
 
-# Get S3 client
-def get_s3_client():
-    config = load_config()
-    return boto3.client('s3', region_name=config['s3']['region_name'])
-
-# Create a new S3 bucket
-def create_bucket(config):
-    s3_client = get_s3_client()
-    bucket_name = config['s3']['bucket_name']
-
+# Refactored: Accept s3_client and config as parameters
+def create_bucket(s3_client, bucket_name, region_name):
     try:
         log.info(f"📦 Creating bucket {bucket_name}...")
-        s3_client.create_bucket(
-            Bucket=bucket_name,
-            CreateBucketConfiguration={'LocationConstraint': config['s3']['region_name']}
-        )
+        if region_name == "us-east-1":
+            s3_client.create_bucket(Bucket=bucket_name)
+        else:
+            s3_client.create_bucket(
+                Bucket=bucket_name,
+                CreateBucketConfiguration={'LocationConstraint': region_name}
+            )
         log.info(f"✅ Bucket {bucket_name} created successfully!")
-    except ClientError as e:
-        log.error(f"❌ ClientError while creating bucket: {e.response['Error']['Message']}")
-    except BotoCoreError as e:
-        log.error(f"❌ BotoCoreError while creating bucket: {str(e)}")
+        return True
+    except (ClientError, BotoCoreError) as e:
+        log.error(f"❌ Error while creating bucket: {str(e)}")
+        return False
 
-# Upload a file to S3
-def upload_file(file_path,config):
-    s3_client = get_s3_client()
-    bucket_name = config['s3']['bucket_name']
+def upload_objects(s3_client, bucket_name, obj_paths):
     try:
-        file_name = os.path.basename(file_path)
-        log.info(f"⬆️ Uploading {file_name} to bucket {bucket_name}...")
-        s3_client.upload_file(file_path, bucket_name, file_name)
-        log.info(f"✅ File {file_name} uploaded successfully!")
-    except FileNotFoundError:
-        log.error("❌ Error: File not found.")
-    except ClientError as e:
-        log.error(f"❌ ClientError while uploading file: {e.response['Error']['Message']}")
-    except BotoCoreError as e:
-        log.error(f"❌ BotoCoreError while uploading file: {str(e)}")
+        for obj_path in obj_paths:
+            obj_name = os.path.basename(obj_path)
+            log.info(f"⬆️ Uploading {obj_name} to bucket {bucket_name}...")
+            s3_client.upload_file(obj_path, bucket_name, obj_name)
+            log.info(f"✅ Object {obj_name} uploaded successfully!")
+        return True
+    except FileNotFoundError as e:
+        log.error(f"❌ Error: File not found - {str(e)}")
+        return False
+    except (ClientError, BotoCoreError) as e:
+        log.error(f"❌ Error while uploading object(s): {str(e)}")
+        return False
 
-# List all files in S3 bucket
-def list_files(config):
-    s3_client = get_s3_client()
-    bucket_name = config['s3']['bucket_name']
 
+def list_objects(s3_client, bucket_name):
     try:
-    
         response = s3_client.list_objects_v2(Bucket=bucket_name)
         if 'Contents' in response:
-            files = []
+            objs = []
             for obj in response['Contents']:
-                files.append({
-                    'File Name': obj['Key'],
+                objs.append({
+                    'Name': obj['Key'],
                     'Size (Bytes)': obj['Size'],
                     'Last Modified': obj['LastModified'].strftime('%Y-%m-%d %H:%M:%S')
                 })
-
-            table = tabulate(files, headers='keys', tablefmt='fancy_grid')
-            log.info(f"Listing files in bucket {bucket_name}: \n{table}")  # Log each line of the table separately
+            table = tabulate(objs, headers='keys', tablefmt='fancy_grid')
+            log.info(f"Listing objects in bucket {bucket_name}:\n{table}")
+            return objs
         else:
             log.info("Bucket is empty.")
-    except ClientError as e:
-        log.error(f"❌ ClientError while listing files: {e.response['Error']['Message']}")
-    except BotoCoreError as e:
-        log.error(f"❌ BotoCoreError while listing files: {str(e)}")
+            return []
+    except (ClientError, BotoCoreError) as e:
+        log.error(f"❌ Error while listing objects: {str(e)}")
+        return None
 
-# Download  file from S3 bucket
-def download_file(file_names, config):
-    s3_client = get_s3_client()
-    bucket_name = config['s3']['bucket_name']
-
+def download_objects(s3_client, bucket_name, obj_names):
     try:
-        for file_name in file_names:
-            log.info(f"⬇️  Downloading {file_name} from S3 bucket {bucket_name}...")
-            s3_client.download_file(bucket_name, file_name, file_name)
-            log.info("✅ Download successful!")
-    except ClientError as e:
-        log.error(f"❌ AWS Client Error: {e.response['Error']['Message']}")
-    except BotoCoreError as e:
-        log.error(f"❌ Boto3 Core Error: {str(e)}")
+        for obj_name in obj_names:
+            log.info(f"⬇️  Downloading {obj_name} from bucket {bucket_name}...")
+            s3_client.download_file(bucket_name, obj_name, obj_name)
+        log.info("✅ Download(s) successful!")
+        return True
+    except (ClientError, BotoCoreError) as e:
+        log.error(f"❌ Error while downloading objects: {str(e)}")
+        return False
 
-# Delete a file from S3 bucket
-def delete_file(file_keys,config):
-    s3_client = get_s3_client()
-    bucket_name = config['s3']['bucket_name']
-
+def delete_objects(s3_client, bucket_name, obj_keys):
     try:
-        for file_key in file_keys:
-            log.info(f"🗑️ Deleting file {file_key} from bucket {bucket_name}...")
-            s3_client.delete_object(Bucket=bucket_name, Key=file_key)
-            log.info(f"✅ File {file_key} deleted successfully!")
-    except ClientError as e:
-        log.error(f"❌ ClientError while deleting file: {e.response['Error']['Message']}")
-    except BotoCoreError as e:
-        log.error(f"❌ BotoCoreError while deleting file: {str(e)}")
+        for obj_key in obj_keys:
+            log.info(f"🗑️ Deleting object {obj_key} from bucket {bucket_name}...")
+            s3_client.delete_object(Bucket=bucket_name, Key=obj_key)
+        log.info("✅ Object(s) deleted successfully!")
+        return True
+    except (ClientError, BotoCoreError) as e:
+        log.error(f"❌ Error while deleting objects: {str(e)}")
+        return False
 
-
-# Delete a bucket
-def delete_bucket(config):
-    bucket_name = config['s3']['bucket_name']
-    s3 = get_s3_client()
-
-    # Empty the bucket first
+def delete_bucket(s3_client, bucket_name):
     try:
         log.info(f"Emptying bucket: {bucket_name}...")
-        response = s3.list_objects_v2(Bucket=bucket_name)
+        response = s3_client.list_objects_v2(Bucket=bucket_name)
         if 'Contents' in response:
             for obj in response['Contents']:
-                s3.delete_object(Bucket=bucket_name, Key=obj['Key'])
+                s3_client.delete_object(Bucket=bucket_name, Key=obj['Key'])
 
-        # Now delete the bucket
         log.info(f"🗑️ Deleting bucket: {bucket_name}...")
-        s3.delete_bucket(Bucket=bucket_name)
+        s3_client.delete_bucket(Bucket=bucket_name)
         log.info("✅ Bucket deleted successfully.")
-    except ClientError as e:
-        log.error(f"❌ Error deleting bucket: {e.response['Error']['Message']}")
+        return True
+    except (ClientError, BotoCoreError) as e:
+        log.error(f"❌ Error deleting bucket: {str(e)}")
+        return False
 
-#list buckets in provided region
-def list_buckets(config):
-    s3_client = get_s3_client()
-    target_region = config['s3']['region_name']
-
+def list_buckets(s3_client, target_region):
     try:
-       
-        buckets =[]
+        buckets = []
         for bucket in s3_client.list_buckets()['Buckets']:
             bucket_name = bucket['Name']
-            loc = s3_client.get_bucket_location(Bucket=bucket['Name'])['LocationConstraint']
+            loc = s3_client.get_bucket_location(Bucket=bucket_name)['LocationConstraint']
+            if loc is None:
+                loc = 'us-east-1'
             if loc == target_region:
                 buckets.append({
                     'Bucket Name': bucket_name,
@@ -141,11 +113,11 @@ def list_buckets(config):
                 })
         if buckets:
             table = tabulate(buckets, headers='keys', tablefmt='fancy_grid')
-            log.info(f"📦 Buckets in region {target_region}: \n{table}")
+            log.info(f"📦 Buckets in region {target_region}:\n{table}")
+            return buckets
         else:
             log.info("❌ No buckets in this region.")
-    except ClientError as e:
-        log.error(f"❌ ClientError while listing buckets: {e.response['Error']['Message']}")
-    except BotoCoreError as e:
-        log.error(f"❌ BotoCoreError while listing buckets: {str(e)}")
-
+            return []
+    except (ClientError, BotoCoreError) as e:
+        log.error(f"❌ Error while listing buckets: {str(e)}")
+        return None
