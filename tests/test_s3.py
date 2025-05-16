@@ -9,8 +9,9 @@ from botocore.exceptions import BotoCoreError, ClientError
 @pytest.fixture
 def s3_client():
     with mock_aws():
-        client = boto3.client('s3', region_name='us-east-1')
+        client = boto3.client("s3", region_name="us-east-1")
         yield client
+
 
 def create_test_bucket_and_upload_files(s3_client, bucket_name):
     region = s3_client.meta.region_name
@@ -18,8 +19,7 @@ def create_test_bucket_and_upload_files(s3_client, bucket_name):
         s3_client.create_bucket(Bucket=bucket_name)
     else:
         s3_client.create_bucket(
-            Bucket=bucket_name,
-            CreateBucketConfiguration={"LocationConstraint": region}
+            Bucket=bucket_name, CreateBucketConfiguration={"LocationConstraint": region}
         )
 
     dummy_files = ["file1.txt", "file2.txt"]
@@ -36,6 +36,7 @@ def cleanup_files(files):
         if os.path.exists(f):
             os.remove(f)
 
+
 def test_download_objects(s3_client):
     bucket_name = "download-bucket"
     dummy_files = create_test_bucket_and_upload_files(s3_client, bucket_name)
@@ -44,6 +45,7 @@ def test_download_objects(s3_client):
     assert result is True
 
     cleanup_files(dummy_files)
+
 
 def test_delete_objects(s3_client):
     bucket_name = "delete-objects-bucket"
@@ -57,6 +59,7 @@ def test_delete_objects(s3_client):
 
     cleanup_files(dummy_files)
 
+
 def test_list_buckets_with_region_filter(s3_client):
     region = s3_client.meta.region_name
     s3.create_bucket(s3_client, "bucket1", region)
@@ -66,9 +69,11 @@ def test_list_buckets_with_region_filter(s3_client):
     assert isinstance(buckets, list)
     assert len(buckets) >= 2
 
+
 def test_create_bucket_failure(s3_client):
     result = s3.create_bucket(s3_client, "", "us-east-1")
     assert result is False
+
 
 def test_delete_bucket(s3_client):
     bucket_name = "test-delete-bucket"
@@ -79,30 +84,33 @@ def test_delete_bucket(s3_client):
     with open(dummy_files[0], "w") as f:
         f.write("dummy content")
     s3.upload_objects(s3_client, bucket_name, dummy_files)
-    
+
     # Delete bucket (which should empty first)
     result = s3.delete_bucket(s3_client, bucket_name)
     assert result is True
-    
+
     # Verify bucket no longer exists
     buckets = s3.list_buckets(s3_client, s3_client.meta.region_name)
-    bucket_names = [b['Bucket Name'] for b in buckets]
+    bucket_names = [b["Bucket Name"] for b in buckets]
     assert bucket_name not in bucket_names
-    
+
     # Cleanup local file
     for f in dummy_files:
         if os.path.exists(f):
             os.remove(f)
+
 
 def test_create_bucket_boto_core_error(s3_client):
     def mock_create_bucket(*args, **kwargs):
         exc = BotoCoreError()
         exc.args = ("Simulated network error",)
         raise exc
+
     s3_client.create_bucket = mock_create_bucket
 
     result = s3.create_bucket(s3_client, "test-bucket", "us-east-1")
     assert result is False
+
 
 def test_upload_objects_client_error(s3_client, tmp_path):
     # Create dummy file
@@ -110,37 +118,43 @@ def test_upload_objects_client_error(s3_client, tmp_path):
     file_path.write_text("dummy content")
 
     def mock_upload_file(*args, **kwargs):
-        error_response = {'Error': {'Code': 'AccessDenied', 'Message': 'Access denied'}}
-        raise ClientError(error_response, 'PutObject')
+        error_response = {"Error": {"Code": "AccessDenied", "Message": "Access denied"}}
+        raise ClientError(error_response, "PutObject")
 
     s3_client.upload_file = mock_upload_file
 
     result = s3.upload_objects(s3_client, "bucket", [str(file_path)])
     assert result is False
 
+
 def test_download_objects_boto_core_error(s3_client):
     def mock_download_file(*args, **kwargs):
         exc = BotoCoreError()
         exc.args = ("Simulated network error",)
         raise exc
+
     s3_client.download_file = mock_download_file
 
     result = s3.download_objects(s3_client, "bucket", ["file.txt"])
     assert result is False
 
+
 def test_delete_objects_client_error(s3_client):
     def mock_delete_object(*args, **kwargs):
-        error_response = {'Error': {'Code': 'NoSuchKey', 'Message': 'Key not found'}}
-        raise ClientError(error_response, 'DeleteObject')
+        error_response = {"Error": {"Code": "NoSuchKey", "Message": "Key not found"}}
+        raise ClientError(error_response, "DeleteObject")
+
     s3_client.delete_object = mock_delete_object
 
     result = s3.delete_objects(s3_client, "bucket", ["file.txt"])
     assert result is False
 
+
 def test_list_buckets_client_error(s3_client):
     def mock_list_buckets(*args, **kwargs):
-        error_response = {'Error': {'Code': 'AccessDenied', 'Message': 'Access denied'}}
-        raise ClientError(error_response, 'ListBuckets')
+        error_response = {"Error": {"Code": "AccessDenied", "Message": "Access denied"}}
+        raise ClientError(error_response, "ListBuckets")
+
     s3_client.list_buckets = mock_list_buckets
 
     result = s3.list_buckets(s3_client, "us-east-1")
