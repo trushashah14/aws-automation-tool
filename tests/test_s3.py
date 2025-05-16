@@ -4,7 +4,7 @@ import boto3
 from aws_automation import s3
 import os
 from botocore.exceptions import BotoCoreError, ClientError
-from botocore.stub import Stubber
+
 
 @pytest.fixture
 def s3_client():
