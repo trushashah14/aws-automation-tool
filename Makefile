@@ -13,7 +13,7 @@ lint:
 	docker run --rm $(IMAGE_NAME) sh -c "ruff check aws_automation tests && black --check aws_automation tests"
 
 test:
-	docker run --rm $(IMAGE_NAME) sh -c "pytest tests"
+	docker run --rm -e PYTHONPATH=/app aws-cli-tool pytest tests
 
 # Run an actual command, e.g. list EC2
 create-instances:
