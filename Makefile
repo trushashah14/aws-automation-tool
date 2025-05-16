@@ -10,7 +10,7 @@ run:
 	docker run --rm -it -v ${PWD}/config.yaml:/app/config.yaml -v C:/Users/behip/.aws/credentials:/root/.aws/credentials $(IMAGE_NAME)
 
 lint:
-	docker run --rm $(IMAGE_NAME) sh -c "ruff aws_automation tests && black --check aws_automation tests"
+	docker run --rm $(IMAGE_NAME) sh -c "ruff -- aws_automation tests && black --check aws_automation tests"
 
 test:
 	docker run --rm $(IMAGE_NAME) sh -c "pytest tests"
