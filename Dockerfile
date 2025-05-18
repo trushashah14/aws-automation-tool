@@ -20,5 +20,7 @@ RUN pip install --no-cache-dir -r dev-requirements.txt \
 # Copy source code
 COPY . .
 
+RUN pip install -e .
+
 # Default command
 ENTRYPOINT ["python", "main.py"]
