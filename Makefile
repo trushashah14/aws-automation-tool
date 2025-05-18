@@ -10,13 +10,13 @@ run:
 	docker run --rm -it -v ${PWD}/config.yaml:/app/config.yaml -v C:/Users/behip/.aws/credentials:/root/.aws/credentials $(IMAGE_NAME)
 
 lint:
-	docker run --rm $(IMAGE_NAME) sh -c "ruff check aws_automation tests && black --check aws_automation tests"
+	docker run --rm --entrypoint "" $(IMAGE_NAME) sh -c "ruff aws_automation tests && black --check aws_automation tests"
 
 test:
 	docker run --rm -e PYTHONPATH=/app aws-cli-tool pytest tests
 
 # Run an actual command, e.g. list EC2
-create-instances:
+create-instance:
 	docker run --rm -it -v ${PWD}/config.yaml:/app/config.yaml -v C:/Users/behip/.aws/credentials:/root/.aws/credentials $(IMAGE_NAME) create
 
 list-instances:
@@ -61,7 +61,7 @@ help:
 	@echo "Available commands:"
 	@echo "  make build                 Build the Docker image"
 	@echo "  make run                   Run CLI interactively"
-	@echo "  make create-instances      Create an ec2 instance "
+	@echo "  make create-instance      Create an ec2 instance "
 	@echo "  make list-instances        List running EC2 instances"
 	@echo "  make start-instance id=iid Start EC2 instance (pass id=...)"
 	@echo "  make stop-instance id=iid  Stop EC2 instance (pass id=...)"

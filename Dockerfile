@@ -20,4 +20,4 @@ RUN pip install --no-cache-dir -r dev-requirements.txt
 COPY . .
 
 # Default command
-CMD ["python", "main.py"]
+ENTRYPOINT ["python", "main.py"]
