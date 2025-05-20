@@ -26,7 +26,7 @@ def object_exists(s3_client, bucket_name, obj_key):
 def list_buckets(s3_client, region_name, return_list=False):
     try:
         response = s3_client.list_buckets()
-        buckets = response['Buckets']
+        buckets = response.get('Buckets', [])
         if not buckets:
             log.info("No buckets found.")
             return [] if return_list else None
@@ -34,15 +34,17 @@ def list_buckets(s3_client, region_name, return_list=False):
         if return_list:
             return [{"Bucket Name": b["Name"], "Creation Date": b["CreationDate"]} for b in buckets]
         else:
-            for b in buckets:
-                log.info(f"🪣 {b['Name']} (Created: {b['CreationDate']})")
-
+            log.info("Listing Buckets:\n" +
+             tabulate(
+                [[b["Name"], b["CreationDate"]] for b in buckets],
+                headers=["Bucket Name", "Creation Date"],
+                tablefmt="fancy_grid"
+            ))
+           
     except ClientError as e:
-        log.error(f"❌ Failed to list buckets: {e.response['Error']['Message']}")
+        log.error(f"Failed to list buckets: {e.response['Error']['Message']}")
         return [] if return_list else None
-
-
-
+    
 def prompt_select_buckets(s3_client, region_name):
     try:
         response = s3_client.list_buckets()
@@ -139,13 +141,19 @@ def list_objects(s3_client, bucket_name, return_list=False):
         if not contents:
             log.info(f"Bucket '{bucket_name}' is empty.")
             return [] if return_list else None
+
         if return_list:
             return [obj['Key'] for obj in contents]
         else:
-            for obj in contents:
-                log.info(f"📄 {obj['Key']} ({obj['Size']} bytes)")
+            log.info(f"Listing Objects in bucket '{bucket_name}':\n"+
+            tabulate(
+                [[obj['Key'], obj['Size']] for obj in contents],
+                headers=["Object Key", "Size (bytes)"],
+                tablefmt="fancy_grid"
+            ))
+           
     except ClientError as e:
-        log.error(f"❌ Failed to list objects: {e.response['Error']['Message']}")
+        log.error(f"Failed to list objects: {e.response['Error']['Message']}")
         return [] if return_list else None
 
 
