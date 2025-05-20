@@ -228,9 +228,9 @@ def delete_bucket(s3_client, bucket_name):
 
     try:
         log.info(f"🧹 Emptying bucket: {bucket_name}...")
-        contents = list_objects(s3_client, bucket_name)
+        contents = list_objects(s3_client, bucket_name, return_list=True)
         for obj in contents:
-            s3_client.delete_object(Bucket=bucket_name, Key=obj["Key"])
+            s3_client.delete_object(Bucket=bucket_name, Key=obj)
 
         log.info(f"🗑️ Deleting bucket: {bucket_name}...")
         s3_client.delete_bucket(Bucket=bucket_name)
