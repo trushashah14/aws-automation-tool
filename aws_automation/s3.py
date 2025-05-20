@@ -26,51 +26,63 @@ def object_exists(s3_client, bucket_name, obj_key):
 def list_buckets(s3_client, region_name, return_list=False):
     try:
         response = s3_client.list_buckets()
-        buckets = response.get('Buckets', [])
+        buckets = response.get("Buckets", [])
         if not buckets:
             log.info("No buckets found.")
             return [] if return_list else None
 
         if return_list:
-            return [{"Bucket Name": b["Name"], "Creation Date": b["CreationDate"]} for b in buckets]
+            return [
+                {"Bucket Name": b["Name"], "Creation Date": b["CreationDate"]}
+                for b in buckets
+            ]
         else:
-            log.info("Listing Buckets:\n" +
-             tabulate(
-                [[b["Name"], b["CreationDate"]] for b in buckets],
-                headers=["Bucket Name", "Creation Date"],
-                tablefmt="fancy_grid"
-            ))
-           
+            log.info(
+                "Listing Buckets:\n"
+                + tabulate(
+                    [[b["Name"], b["CreationDate"]] for b in buckets],
+                    headers=["Bucket Name", "Creation Date"],
+                    tablefmt="fancy_grid",
+                )
+            )
+
     except ClientError as e:
         log.error(f"Failed to list buckets: {e.response['Error']['Message']}")
         return [] if return_list else None
-    
+
+
 def prompt_select_buckets(s3_client, region_name):
     try:
         response = s3_client.list_buckets()
-        all_buckets = response.get('Buckets', [])
+        all_buckets = response.get("Buckets", [])
         if region_name:
             buckets = [
-                b['Name'] for b in all_buckets
-                if s3_client.get_bucket_location(Bucket=b['Name'])['LocationConstraint'] == region_name
-                or (region_name == 'us-east-1' and s3_client.get_bucket_location(Bucket=b['Name'])['LocationConstraint'] is None)
+                b["Name"]
+                for b in all_buckets
+                if s3_client.get_bucket_location(Bucket=b["Name"])["LocationConstraint"]
+                == region_name
+                or (
+                    region_name == "us-east-1"
+                    and s3_client.get_bucket_location(Bucket=b["Name"])[
+                        "LocationConstraint"
+                    ]
+                    is None
+                )
             ]
         else:
-            buckets = [b['Name'] for b in all_buckets]
+            buckets = [b["Name"] for b in all_buckets]
 
         if not buckets:
             log.warning("⚠️ No buckets available to select.")
             return []
 
-        selected = questionary.checkbox(
-            "Select bucket(s):",
-            choices=buckets
-        ).ask()
+        selected = questionary.checkbox("Select bucket(s):", choices=buckets).ask()
 
         return selected or []
     except ClientError as e:
         log.error(f"❌ Failed to fetch bucket list: {e.response['Error']['Message']}")
         return []
+
 
 def prompt_select_objects(s3_client, bucket_name):
     try:
@@ -80,14 +92,14 @@ def prompt_select_objects(s3_client, bucket_name):
             return []
 
         selected = questionary.checkbox(
-            f"Select object(s) from '{bucket_name}':",
-            choices=object_list
+            f"Select object(s) from '{bucket_name}':", choices=object_list
         ).ask()
 
         return selected or []
     except ClientError as e:
         log.error(f"❌ Failed to fetch object list: {e.response['Error']['Message']}")
         return []
+
 
 def create_bucket(s3_client, bucket_name, region_name):
     try:
@@ -133,29 +145,29 @@ def upload_objects(s3_client, bucket_name, obj_paths):
         return False
 
 
-
 def list_objects(s3_client, bucket_name, return_list=False):
     try:
         response = s3_client.list_objects_v2(Bucket=bucket_name)
-        contents = response.get('Contents', [])
+        contents = response.get("Contents", [])
         if not contents:
             log.info(f"Bucket '{bucket_name}' is empty.")
             return [] if return_list else None
 
         if return_list:
-            return [obj['Key'] for obj in contents]
+            return [obj["Key"] for obj in contents]
         else:
-            log.info(f"Listing Objects in bucket '{bucket_name}':\n"+
-            tabulate(
-                [[obj['Key'], obj['Size']] for obj in contents],
-                headers=["Object Key", "Size (bytes)"],
-                tablefmt="fancy_grid"
-            ))
-           
+            log.info(
+                f"Listing Objects in bucket '{bucket_name}':\n"
+                + tabulate(
+                    [[obj["Key"], obj["Size"]] for obj in contents],
+                    headers=["Object Key", "Size (bytes)"],
+                    tablefmt="fancy_grid",
+                )
+            )
+
     except ClientError as e:
         log.error(f"Failed to list objects: {e.response['Error']['Message']}")
         return [] if return_list else None
-
 
 
 def download_objects(s3_client, bucket_name, obj_names, dest_dir):
