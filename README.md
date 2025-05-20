@@ -97,27 +97,27 @@ Inside the container, run:
 python main.py create
 python main.py list
 python main.py start --instance-id i-0123456789abcdef0
-python main.py s3-file-upload --file-path README.md
+python main.py s3-obj-upload --obj-path README.md
 ```
 
 ### Option 2: Use Makefile Commands Directly
 
 ```bash
-make create-instances    # 🚀 Launch a new EC2 instance
-make list-instances            # 📄 List all running EC2 instances
-make stop-instance id=...      # ⏹️ Stop an EC2 instance
-make start-instance id=...     # ▶️ Start a stopped EC2 instance
-make terminate-instance id=... # ❌ Terminate an EC2 instance
+make create-instance                  # 🚀 Launch a new EC2 instance
+make list-instances                   # 📄 List all running EC2 instances
+make stop-instance id=...             # ⏹️ Stop an EC2 instance
+make start-instance id=...            # ▶️ Start a stopped EC2 instance
+make terminate-instance id=...        # ❌ Terminate an EC2 instance
 
-make create-bucket             # 🪣 Create the configured S3 bucket
-make list-buckets              # 📋 List all S3 buckets
-make list-objects              # 📦 List all objects in the S3 bucket
-make upload-object file=...    # ⬆️ Upload a file to the S3 bucket
-make download-object key=...   # ⬇️ Download a file from the S3 bucket
-make delete-object key=...     # 🗑️ Delete file(s) from the S3 bucket
-make delete-bucket             # 🪣 Delete the configured S3 bucket
+make create-bucket                    # 🪣 Create the configured S3 bucket
+make list-buckets                     # 📋 List all S3 buckets
+make list-objects                     # 📦 List all objects in the S3 bucket
+make upload-objects obj=...           # ⬆️ Upload a file to the S3 bucket
+make download-objects obj=... dest=   # ⬇️ Download a file from the S3 bucket to your required destination
+make delete-objects obj=...           # 🗑️ Delete file(s) from the S3 bucket
+make delete-bucket                    # 🪣 Delete the configured S3 bucket
 
-make clean                     # 🧹 Stop and remove all containers/images
+make clean                            # 🧹 Stop and remove all containers/images
 ```
 💡 Replace `...` with actual values (e.g., instance ID, file name).
 
@@ -125,13 +125,22 @@ make clean                     # 🧹 Stop and remove all containers/images
 You can update,  download or delete multiple files at once by wrapping them in quotes:
 
 ```bash
-make delete-object obj="obj1 obj2"
-make download-object obj="obj1 obj2"
-make upload-object obj="obj1 obj2"
+make delete-objects obj="obj1 obj2"
+make download-objects obj="obj1 obj2" dest=..
+make upload-objects obj="obj1 obj2"
 ```
 Same applies to python main.py commands inside the container.
 
 ---
+
+### ✨ Interactive Mode for S3 Commands
+You can also run interactive prompts to select files or buckets for deletion or download instead of specifying them explicitly. This helps avoid typos and makes multi-selection easier.
+
+```bash
+make delete-objects interactive=true
+make download-objects interactive=true dest=./downloads
+make delete-bucket interactive=true
+```
 
 ## 📃 License
 

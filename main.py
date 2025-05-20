@@ -14,7 +14,9 @@ from aws_automation.s3 import (
     delete_objects,
     download_objects,
     delete_bucket,
-    list_buckets
+    list_buckets,
+    prompt_select_objects,
+    prompt_select_buckets,
 )
 from aws_automation.utils import load_config, logger
 
@@ -87,17 +89,42 @@ def main():
     parser_upload = subparsers.add_parser('s3-obj-upload', help='Upload one or more objects to S3')
     parser_upload.add_argument('--obj-paths', nargs='+', required=True, help='Path(s) to the object(s) to upload')
 
-
     subparsers.add_parser('s3-obj-list', help='List objects in S3 bucket')
+
     subparsers.add_parser('s3-bucket-list', help='List S3 buckets')
 
     parser_download = subparsers.add_parser('s3-obj-download', help='Download object(s) from S3')
-    parser_download.add_argument('--obj-names', nargs='+', required=True)
+    parser_download.add_argument('--obj-names', nargs='+', help='Object name(s) to download')
+    parser_download.add_argument(
+        "--dest",
+        default=".",
+        help="Destination directory to download the object(s). Defaults to current directory."
+    )
+    parser_download.add_argument(
+        '--interactive',
+        action='store_true',
+        help='Interactively select objects to download'
+    )
 
     parser_delete = subparsers.add_parser('s3-obj-delete', help='Delete object(s) from S3')
-    parser_delete.add_argument('--obj-names', nargs='+', required=True)
+    parser_delete.add_argument('--obj-names', nargs='+', help='Object name(s) to delete')
+    parser_delete.add_argument(
+        '--interactive',
+        action='store_true',
+        help='Interactively select objects to delete'
+    )
 
-    subparsers.add_parser('s3-delete', help='Delete the configured S3 bucket')
+    parser_bucket_delete = subparsers.add_parser('s3-delete', help='Delete one or more S3 buckets')
+    parser_bucket_delete.add_argument(
+        '--interactive',
+        action='store_true',
+        help='Interactively select buckets to delete'
+    )
+    parser_bucket_delete.add_argument(
+        '--bucket-names',
+        nargs='+',
+        help='Name(s) of buckets to delete (ignored if --interactive is used)'
+    )
 
     args = parser.parse_args()
 
@@ -124,7 +151,6 @@ def main():
     elif args.command == 's3-obj-upload':
         upload_objects(s3_client, config['s3']['bucket_name'], args.obj_paths)
 
-
     elif args.command == 's3-obj-list':
         list_objects(s3_client, config['s3']['bucket_name'])
 
@@ -132,21 +158,50 @@ def main():
         list_buckets(s3_client, config['s3']['region_name'])
 
     elif args.command == 's3-obj-download':
-        download_objects(s3_client, config['s3']['bucket_name'], args.obj_names)
+        obj_names = args.obj_names or []
+        if args.interactive:
+            obj_names = prompt_select_objects(s3_client, config['s3']['bucket_name'])
+            if not obj_names:
+                log.info("❎ No objects selected for download.")
+                return
+        if not obj_names:
+            log.error("❌ No object names provided for download.")
+            return
+        download_objects(s3_client, config['s3']['bucket_name'], obj_names, args.dest)
 
     elif args.command == 's3-obj-delete':
-        confirm = input(f"⚠️ Are you sure you want to delete object(s) {', '.join(args.obj_names)}? [y/N]: ")
+        obj_names = args.obj_names or []
+        if args.interactive:
+            obj_names = prompt_select_objects(s3_client, config['s3']['bucket_name'])
+            if not obj_names:
+                log.info("❎ No objects selected for deletion.")
+                return
+        if not obj_names:
+            log.error("❌ No object names provided for deletion.")
+            return
+        confirm = input(f"⚠️ Are you sure you want to delete object(s) {', '.join(obj_names)}? [y/N]: ")
         if confirm.lower() == 'y':
-            delete_objects(s3_client, config['s3']['bucket_name'], args.obj_names)
+            delete_objects(s3_client, config['s3']['bucket_name'], obj_names)
         else:
             log.info("❎ Deletion aborted by user.")
 
     elif args.command == 's3-delete':
-        confirm = input(f"⚠️ Are you sure you want to delete bucket '{config['s3']['bucket_name']}'? [y/N]: ")
-        if confirm.lower() == 'y':
-            delete_bucket(s3_client, config['s3']['bucket_name'])
-        else:
-            log.info("❎ Deletion aborted by user.")
+        bucket_names = args.bucket_names or []
+        if args.interactive:
+            bucket_names = prompt_select_buckets(s3_client, config['s3']['region_name'])
+            if not bucket_names:
+                log.info("❎ No buckets selected for deletion.")
+                return
+        if not bucket_names:
+            # fallback to config bucket name if no bucket names provided
+            bucket_names = [config['s3']['bucket_name']]
+
+        for bucket_name in bucket_names:
+            confirm = input(f"⚠️ Are you sure you want to delete bucket '{bucket_name}'? [y/N]: ")
+            if confirm.lower() == 'y':
+                delete_bucket(s3_client, bucket_name)
+            else:
+                log.info(f"❎ Deletion of bucket '{bucket_name}' aborted by user.")
 
     else:
         parser.print_help()
